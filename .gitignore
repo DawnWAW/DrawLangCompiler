@@ -2,11 +2,6 @@
 /Compiler_cpp/
 
 # doc文档中非自创文件
-/doc/heart.dl.txt
-/doc/heart.py
-/doc/heart_python.png
-/doc/实验讲解1-scanner.pptx
-/doc/实验讲解2-parser.pptx
-/doc/实验讲解3-Last.pptx
+/doc/resource
 
 /.idea/

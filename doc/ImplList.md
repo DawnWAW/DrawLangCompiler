@@ -6,7 +6,7 @@
 ### 1. 确定核心语法要素
 | 要素类型  | 具体内容                                                     |
 | --------- | ------------------------------------------------------------ |
-| 保留字    | ORIGIN、SCALE、ROT、IS、FOR、FROM、TO、STEP、DRAW            |
+| 保留字    | `ORIGIN`、`SCALE`、`ROT`、`IS`、`FOR`、`FROM`、`TO`、`STEP`、`DRAW` |
 | 运算符    | +（加）、-（减）、*（乘）、/（除）、**（幂运算）             |
 | 常量/参数 | 数值常量（如3.14、5）、符号常量（PI=3.14159、E=2.71828）、参数T |
 | 函数      | sin、cos、tan（仅保留基础三角函数，降低复杂度）              |
@@ -27,91 +27,152 @@
 
 ## 二、阶段1：实现词法分析器（3-4小时）
 ### 目标
-将源程序字符串拆分为「记号（Token）」，如`ROT IS PI/6;`拆为 `<ROT, "ROT">`、`<IS, "IS">`、`<CONST_ID, "PI", 3.14159>`、`<DIV, "/">`、`<CONST_ID, "6", 6.0>`、`<SEMICO, ";")`
+将源程序字符串拆分为记号（Token），使用Python字典/类存储Token信息。
 
 ### 核心步骤
-1. **定义记号结构（用结构体/类表示）**
-   ```c
-   // C语言示例，Python可简化为字典
-   typedef struct Token {
-       enum TokenType type;  // 记号类别：ORIGIN/SCALE/CONST_ID等
-       char* lexeme;         // 原始字符串（如"PI"、"/"）
-       double value;         // 常量值（仅CONST_ID有效）
-       double (*func)(double); // 函数指针（仅FUNC有效，如sin）
-   } Token;
+1. **定义Token数据结构**
+   ```python
+   from dataclasses import dataclass
+   
+   @dataclass
+   class Token:
+       type: str  # 记号类别：'ORIGIN'/'SCALE'/'CONST_ID'等
+       lexeme: str  # 原始字符串
+       value: float = None  # 常量值（仅CONST_ID有效）
+       func: callable = None  # 函数（仅FUNC有效）
    ```
 
-2. **编写符号表（区分ID类记号）**
-   ```c
-   // 存储保留字、常量、函数，用于ID匹配
-   struct Token SymbolTable[] = {
-       {CONST_ID, "PI", 3.1415926, NULL},
-       {CONST_ID, "E", 2.71828, NULL},
-       {T, "T", 0.0, NULL},
-       {FUNC, "SIN", 0.0, sin},
-       {FUNC, "COS", 0.0, cos},
-       {ORIGIN, "ORIGIN", 0.0, NULL},
-       // 补充其他保留字...
-   };
+2. **实现符号表（字典形式）**
+   ```python
+   import math
+   
+   SYMBOL_TABLE = {
+       'PI': Token('CONST_ID', 'PI', math.pi),
+       'E': Token('CONST_ID', 'E', math.e),
+       'T': Token('T', 'T'),
+       'SIN': Token('FUNC', 'SIN', func=math.sin),
+       'COS': Token('FUNC', 'COS', func=math.cos),
+       'TAN': Token('FUNC', 'TAN', func=math.tan),
+       'ORIGIN': Token('ORIGIN', 'ORIGIN'),
+       'SCALE': Token('SCALE', 'SCALE'),
+       'ROT': Token('ROT', 'ROT'),
+       'IS': Token('IS', 'IS'),
+       'FOR': Token('FOR', 'FOR'),
+       'FROM': Token('FROM', 'FROM'),
+       'TO': Token('TO', 'TO'),
+       'STEP': Token('STEP', 'STEP'),
+       'DRAW': Token('DRAW', 'DRAW')
+   }
    ```
 
-3. **实现核心扫描函数（GetToken）**
-   - 步骤1：跳过空白字符（空格、换行、制表符）
-   - 步骤2：识别字符类型，分场景处理：
-     - 字母开头：匹配ID/保留字（查符号表）
-     - 数字开头：匹配CONST_ID（处理整数/小数，如123、45.6）
-     - 运算符/分隔符：匹配+、-、*、/、**、;、(、)、,（注意**需多字符匹配）
-   - 步骤3：返回Token，遇到文件结束返回`NONTOKEN`，非法字符返回`ERRTOKEN`
+3. **实现扫描函数（get_token）**
+   - 使用正则表达式简化匹配逻辑（Python优势）
+   ```python
+   import re
+   
+   # 正则匹配模式：按优先级排序
+   TOKEN_PATTERNS = [
+       ('NUMBER', r'\d+\.?\d*|\.\d+'),  # 数字常量
+       ('ID', r'[A-Za-z]+'),  # 标识符
+       ('POWER', r'\*\*'),  # 幂运算
+       ('MUL', r'\*'),
+       ('DIV', r'/'),
+       ('PLUS', r'\+'),
+       ('MINUS', r'-'),
+       ('L_BRACKET', r'\('),
+       ('R_BRACKET', r'\)'),
+       ('COMMA', r','),
+       ('SEMICO', r';'),
+       ('WHITESPACE', r'[ \t\n]+'),  # 空白字符
+       ('COMMENT', r'//.*')  # 注释
+   ]
+   pattern = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_PATTERNS)
+   
+   def get_token(source_code, pos):
+       # 从pos位置开始扫描并返回下一个Token及新位置
+       match = re.match(pattern, source_code[pos:])
+       if not match:
+           return Token('ERRTOKEN', source_code[pos]), pos + 1
+       token_type = match.lastgroup
+       lexeme = match.group()
+       pos += len(lexeme)
+       
+       if token_type == 'WHITESPACE' or token_type == 'COMMENT':
+           return get_token(source_code, pos)  # 跳过空白和注释
+       elif token_type == 'ID':
+           upper_lex = lexeme.upper()
+           return SYMBOL_TABLE.get(upper_lex, Token('ID', lexeme)), pos
+       elif token_type == 'NUMBER':
+           return Token('CONST_ID', lexeme, float(lexeme)), pos
+       else:
+           return Token(token_type, lexeme), pos
+   ```
 
 4. **测试词法分析器**
-   - 输入测试文件（如`test.dl`），打印每个Token的类型、字符串、值
-   - 验证用例：`ROT IS PI/6;` 应输出正确Token序列，无遗漏/错误
+   ```python
+   def test_lexer(source_code):
+       pos = 0
+       while pos < len(source_code):
+           token, pos = get_token(source_code, pos)
+           if token.type == 'ERRTOKEN':
+               print(f"错误：非法字符 {token.lexeme}")
+               break
+           print(f"<{token.type}, {token.lexeme}, {token.value or ''}>")
+   ```
 
 
 ## 三、阶段2：实现语法分析器（4-5小时）
 ### 目标
-验证Token流语法正确性，构建「表达式语法树」，如`PI/6`构建为：`DIV节点（左：PI常量节点，右：6常量节点）`
+验证Token流语法正确性，构建表达式抽象语法树（AST）。
 
 ### 核心步骤
-1. **改写文法为EBNF（消除左递归/二义性，仅保留核心规则）**
-   ```ebnf
-   // 程序 = 若干语句+分号
-   Program → { Statement SEMICO }
-   // 语句 = 原点/缩放/旋转/绘图语句
-   Statement → OriginStmt | ScaleStmt | RotStmt | ForStmt
-   // 原点语句：ORIGIN IS (表达式,表达式)
-   OriginStmt → ORIGIN IS L_BRACKET Expression COMMA Expression R_BRACKET
-   // 缩放语句：SCALE IS (表达式,表达式)
-   ScaleStmt → SCALE IS L_BRACKET Expression COMMA Expression R_BRACKET
-   // 旋转语句：ROT IS 表达式
-   RotStmt → ROT IS Expression
-   // 绘图语句：FOR T FROM 表达式 TO 表达式 STEP 表达式 DRAW (表达式,表达式)
-   ForStmt → FOR T FROM Expression TO Expression STEP Expression DRAW L_BRACKET Expression COMMA Expression R_BRACKET
-   // 表达式：优先级从低到高（+- → */ → ** → 原子）
-   Expression → Term { (PLUS | MINUS) Term }
-   Term → Factor { (MUL | DIV) Factor }
-   Factor → Atom [ POWER Factor ]  // POWER（**）右结合
-   Atom → CONST_ID | T | FUNC L_BRACKET Expression R_BRACKET | L_BRACKET Expression R_BRACKET
+1. **定义AST节点类**
+   ```python
+   class ExprNode:
+       def __init__(self, node_type, **kwargs):
+           self.type = node_type  # 'CONST'/'T'/'FUNC'/'OP'
+           self.attrs = kwargs
+   
+       def __repr__(self):
+           return f"ExprNode({self.type}, {self.attrs})"
    ```
 
-2. **定义语法树节点结构**
-   ```c
-   typedef struct ExprNode {
-       enum NodeType type;  // 节点类型：CONST/T/FUNC/OP（运算）
-       union {
-           double const_val;          // 常量值（CONST节点）
-           double* parm_ptr;          // 参数T指针（T节点）
-           struct {                   // 函数节点（FUNC）
-               double (*func)(double);
-               struct ExprNode* child;
-           } func_node;
-           struct {                   // 运算节点（OP：+/-/*//**）
-               enum OpType op;
-               struct ExprNode* left;
-               struct ExprNode* right;
-           } op_node;
-       } content;
-   } ExprNode;
+2. **实现递归下降分析器**
+   ```python
+   class Parser:
+       def __init__(self, source_code):
+           self.source = source_code
+           self.pos = 0
+           self.current_token, self.pos = get_token(source_code, 0)
+   
+       def match(self, expected_type):
+           # 匹配预期Token类型，不匹配则报错
+           if self.current_token.type == expected_type:
+               self.current_token, self.pos = get_token(self.source, self.pos)
+           else:
+               raise SyntaxError(f"预期 {expected_type}，但得到 {self.current_token.type}")
+   
+       def parse_program(self):
+           # 程序 = 若干语句+分号
+           while self.current_token.type != 'NONTOKEN':
+               self.parse_statement()
+               self.match('SEMICO')
+   
+       def parse_statement(self):
+           # 语句 = 原点/缩放/旋转/绘图语句
+           if self.current_token.type == 'ORIGIN':
+               self.parse_origin_stmt()
+           elif self.current_token.type == 'SCALE':
+               self.parse_scale_stmt()
+           elif self.current_token.type == 'ROT':
+               self.parse_rot_stmt()
+           elif self.current_token.type == 'FOR':
+               self.parse_for_stmt()
+           else:
+               raise SyntaxError(f"未知语句类型：{self.current_token.type}")
+   
+       # 其他解析方法：parse_origin_stmt/parse_scale_stmt/parse_rot_stmt/parse_for_stmt
+       # 表达式解析方法：parse_expression/parse_term/parse_factor/parse_atom（遵循EBNF规则）
    ```
 
 3. **实现递归下降子程序（关键函数）**
@@ -126,82 +187,86 @@
    | MatchToken() | 验证当前Token是否符合预期，符合则获取下一个Token，否则报错   |
 
 4. **测试语法分析器**
-   - 输入合法语句，打印语法树结构（如先序遍历输出节点类型）
-   - 验证错误场景：缺少分号、括号不匹配、FOR语句缺STEP，应提示错误位置
+   - 可视化AST结构（使用递归打印）
+   ```python
+   def print_ast(node, indent=0):
+       print(' ' * indent + f"{node.type}: {node.attrs}")
+       if node.type == 'OP':
+           print_ast(node.attrs['left'], indent + 4)
+           print_ast(node.attrs['right'], indent + 4)
+       elif node.type == 'FUNC':
+           print_ast(node.attrs['child'], indent + 4)
+   ```
 
 
 ## 四、阶段3：实现语义分析与绘图（3-4小时）
 ### 目标
-计算语法树值，处理坐标变换，最终绘制图形（核心是“解释执行”）
+计算AST值，处理坐标变换，使用matplotlib绘制图形。
 
 ### 核心步骤
-1. **定义全局状态变量（存储图形参数）**
-   ```c
-   double OriginX = 0.0, OriginY = 0.0;  // 原点坐标
-   double ScaleX = 1.0, ScaleY = 1.0;    // 缩放比例
-   double RotAng = 0.0;                  // 旋转角度（弧度）
-   double Parameter = 0.0;               // 参数T的当前值
+1. **定义全局状态管理**
+   ```python
+   class GraphicsState:
+       def __init__(self):
+           self.origin = (0.0, 0.0)
+           self.scale = (1.0, 1.0)
+           self.rot = 0.0
+           self.parameter = 0.0  # 当前T值
+   
+   state = GraphicsState()
    ```
 
-2. **实现表达式求值函数（GetExprVal）**
-   - 逻辑：深度优先后序遍历语法树，递归计算每个节点值
-   ```c
-   double GetExprVal(ExprNode* root) {
-       if (root == NULL) return 0.0;
-       switch (root->type) {
-           case CONST: return root->content.const_val;
-           case T: return *root->content.parm_ptr;  // 取Parameter当前值
-           case FUNC: return (*root->content.func_node.func)(GetExprVal(root->content.func_node.child));
-           case OP: {
-               double left = GetExprVal(root->content.op_node.left);
-               double right = GetExprVal(root->content.op_node.right);
-               switch (root->content.op_node.op) {
-                   case PLUS: return left + right;
-                   case MINUS: return left - right;
-                   // 补充*/**运算...
-               }
-           }
-       }
-   }
+2. **实现表达式求值函数**
+   ```python
+   def evaluate(node):
+       if node.type == 'CONST':
+           return node.attrs['value']
+       elif node.type == 'T':
+           return state.parameter
+       elif node.type == 'FUNC':
+           return node.attrs['func'](evaluate(node.attrs['child']))
+       elif node.type == 'OP':
+           left_val = evaluate(node.attrs['left'])
+           right_val = evaluate(node.attrs['right'])
+           op = node.attrs['op']
+           if op == 'PLUS':
+               return left_val + right_val
+           elif op == 'MINUS':
+               return left_val - right_val
+           # 补充其他运算符实现...
    ```
 
-3. **实现坐标变换函数（CalcScreenCoord）**
-   - 逻辑：按“比例→旋转→平移”顺序，将原始坐标转为屏幕坐标
-   ```c
-   void CalcScreenCoord(ExprNode* x_expr, ExprNode* y_expr, double* screen_x, double* screen_y) {
-       // 1. 计算原始坐标
-       double x = GetExprVal(x_expr) * ScaleX;
-       double y = GetExprVal(y_expr) * ScaleY;
-       // 2. 旋转变换（逆时针）
-       double temp = x * cos(RotAng) + y * sin(RotAng);
-       y = y * cos(RotAng) - x * sin(RotAng);
-       x = temp;
-       // 3. 平移变换
-       *screen_x = x + OriginX;
-       *screen_y = y + OriginY;
-   }
+3. **坐标变换与绘图**
+   ```python
+   import matplotlib.pyplot as plt
+   
+   class Drawer:
+       def __init__(self):
+           self.fig, self.ax = plt.subplots(figsize=(8, 6))
+           self.points = []
+   
+       def transform(self, x, y):
+           # 比例→旋转→平移变换
+           x_scaled = x * state.scale[0]
+           y_scaled = y * state.scale[1]
+           
+           # 旋转变换
+           x_rot = x_scaled * math.cos(state.rot) + y_scaled * math.sin(state.rot)
+           y_rot = y_scaled * math.cos(state.rot) - x_scaled * math.sin(state.rot)
+           
+           # 平移变换
+           return x_rot + state.origin[0], y_rot + state.origin[1]
+   
+       def draw_pixel(self, x, y):
+           self.points.append(self.transform(x, y))
+   
+       def render(self):
+           # 批量绘制所有点
+           if self.points:
+               xs, ys = zip(*self.points)
+               self.ax.scatter(xs, ys, s=1, c='red')
+           plt.show()
    ```
-
-4. **实现绘图逻辑（分语句处理）**
-   - 原点/缩放/旋转语句：更新全局变量（如`OriginX = GetExprVal(x_expr)`）
-   - FOR绘图语句：循环遍历T的取值范围，计算每个点坐标并绘制
-     ```c
-     void ProcessForStmt(ExprNode* start, ExprNode* end, ExprNode* step, ExprNode* x_expr, ExprNode* y_expr) {
-         double s = GetExprVal(start);
-         double e = GetExprVal(end);
-         double st = GetExprVal(step);
-         for (Parameter = s; Parameter <= e; Parameter += st) {
-             double sx, sy;
-             CalcScreenCoord(x_expr, y_expr, &sx, &sy);
-             DrawPixel((int)sx, (int)sy);  // 调用绘图库接口（如matplotlib的scatter）
-         }
-     }
-     ```
-
-5. **集成绘图库（以Python matplotlib为例）**
-   - 初始化画布：`plt.figure(figsize=(8,6))`，设置坐标轴范围
-   - 实现`DrawPixel`：用`plt.scatter(sx, sy, s=2, c='red')`绘制点
-   - 最后调用`plt.show()`显示图形
 
 
 ## 五、阶段4：测试与优化（2-3小时）
@@ -221,13 +286,14 @@
 
 
 ## 六、交付物清单
-1. 源代码文件（按模块拆分）
-   - `scanner.c/scanner.h`：词法分析器
-   - `parser.c/parser.h`：语法分析器
-   - `semantic.c/semantic.h`：语义分析与绘图
-   - `main.c`：主程序（初始化→调用分析器→绘图）
-2. 测试用例文件（3-5个，覆盖合法/错误场景）
-3. 运行说明（编译命令、运行步骤、效果截图）
+1. 源代码文件
+   - `lexer.py`：词法分析器
+   - `parser.py`：语法分析器
+   - `interpreter.py`：语义分析与绘图逻辑
+   - `main.py`：主程序入口
+
+2. 测试用例（Python脚本形式）
+3. 运行说明（含pip安装依赖：`pip install matplotlib`）
 
 
-通过以上步骤，可在12-18小时内完成简化版编译器，核心功能完整且符合实验要求。若需扩展（如支持更多函数、颜色设置），可在该基础上逐步添加模块。
+该方案保留核心功能逻辑，充分利用Python的正则表达式、面向对象特性和matplotlib库简化实现，总耗时可控制在10-15小时，更适合快速开发验证。

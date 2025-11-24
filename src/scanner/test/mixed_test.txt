@@ -1,0 +1,15 @@
+// 正确+非法的错误测试集
+origin is (100, 300);    -- 设置原点偏移
+rot is PI/6;             // 旋转30度（PI/6弧度）
+
+// 下面是非法输入测试：全角逗号、非法标识符forT、非法字符@
+origin is (100，200); // 全角逗号: 会报错非utf-8
+
+scale is (100, 100/3);   -- 比例设置
+forT from 0 to 100 step 1 draw (t, t); // 非法标识符: forT会被识别成ID
+
+for T from 0 to 200 step 1 draw (t, 0);
+@draw (a, 0); // 非法字符
+
+for T from 0 to 150 step 1 draw (0, -t);
+for T from 0 to 2*PI step PI/50 draw (sin(T), cos(T)); // 圆

@@ -1,0 +1,7 @@
+// 全部正确的测试用例
+origin is (100, 300);    -- 设置原点偏移
+rot is PI/6;             // 旋转30度（PI/6弧度）
+scale is (100, 100/3);   -- 比例设置
+for T from 0 to 200 step 1 draw (t, 0);
+for T from 0 to 150 step 1 draw (0, -t);
+for T from 0 to 2*PI step PI/50 draw (sin(T), cos(T)); // 圆

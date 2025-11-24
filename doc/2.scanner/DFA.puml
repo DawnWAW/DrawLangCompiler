@@ -1,0 +1,61 @@
+@startuml DFA
+title DFA State Transition Diagram
+
+[*] --> State0 : Start
+
+State0 : 0
+State0 --> State1 : Letter [0]
+State0 --> State2 : Digit [1]
+State0 --> Error : . [2]
+State0 --> State4 : '*' [3]
+State0 --> State6 : '/' [4]
+State0 --> State7 : '-' [5]
+State0 --> State8 : '+' [6]
+State0 --> State10 : ; [7]
+State0 --> State11 : ( [8]
+State0 --> State12 : ) [9]
+State0 --> State13 : , [10]
+
+State1 : ID
+State1 --> State1 : Letter/Digit [0/1]
+
+State2 : CONST_ID (Integer)
+State2 --> State2 : Digit [1]
+State2 --> State3 : . [2]
+
+State3 : CONST_ID (Decimal)
+State3 --> State3 : Digit [1]
+
+State4 : MUL
+State4 --> State5 : '*' [3]
+
+State5 : POWER
+
+State6 : DIV
+State6 --> State9 : / [4]
+
+State7 : MINUS
+State7 --> State9 : '-' [5]
+
+State8 : PLUS
+
+State9 : COMMENT
+
+State10 : SEMICO
+
+State11 : L_BRACKET
+
+State12 : R_BRACKET
+
+State13 : COMMA
+
+note right of State0
+  Character Types:
+  0=Letter, 1=Digit, 2=., 3=*
+  4=/, 5=-, 6=+, 7=;
+  8=(, 9=), 10=,, 11=Other
+end note
+
+Error : Invalid State
+
+@enduml

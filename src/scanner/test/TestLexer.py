@@ -43,3 +43,4 @@ if __name__ == "__main__":
     test_lexer("correct_test.txt")
     test_lexer("error_test.txt")
     test_lexer("mixed_test.txt")
+    test_lexer("comment_test.txt")

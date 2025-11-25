@@ -15,6 +15,7 @@ class TokenType(Enum):
     T = "T"              # 唯一参数
     ID = "ID"            # 未匹配的标识符（后续查符号表）
     COMMENT = "COMMENT"  # 注释
+    COMMENT_START = "COMMENT_START"  # 多行注释开始
     CONST_ID = "CONST_ID"# 常数（字面量或PI/E）
     FUNC = "FUNC"        # 函数（Sin/Cos等）
     # 运算符

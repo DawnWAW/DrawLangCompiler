@@ -90,6 +90,22 @@ class Lexer:
                     if comment_char == "" or comment_char == "\n":
                         break
                 continue  # 重新进入循环，获取下一个记号
+            elif token.type == TokenType.COMMENT_START:
+                # 多行注释开始，跳过到结束符 */
+                while True:
+                    comment_char = self.get_char()
+                    if comment_char == "":  # 文件结束
+                        break
+                    if comment_char == "*":
+                        # 检查下一个字符是否为 /
+                        next_char = self.get_char()
+                        if next_char == "/":
+                            # 找到结束符 */
+                            break
+                        else:
+                            # 不是结束符，回退字符
+                            self.back_char()
+                continue  # 继续进入循环，获取下一个记号
             else:
                 # 其他记号（运算符、分隔符、保留字）直接返回
                 return token

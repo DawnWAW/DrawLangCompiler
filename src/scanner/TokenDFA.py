@@ -10,7 +10,7 @@ def is_digit(ch: str) -> bool:
 
 # ---------------------------
 # DFA状态转移表：(当前状态, 输入字符类型) -> 下一状态
-# 字符类型：0=字母, 1=数字, 2=., 3=*, 4=/, 5=-, 6=+, 7=;, 8=(, 9=), 10=,, 11=其他
+# 字符类型：0=字母, 1=数字, 2=., 3=*, 4=/, 5=-, 6=+, 7=;, 8=(, 9=), 10=,, 11=其他, 12=#
 # ---------------------------
 TRANSITION_TABLE = {
     # 初态0的转移
@@ -21,6 +21,7 @@ TRANSITION_TABLE = {
     (0, 4): 6,    # / -> 状态6（DIV）
     (0, 5): 7,    # - -> 状态7（MINUS）
     (0, 6): 8,    # + -> 状态8（PLUS）
+    (0, 12): 9,   # # -> 状态9（COMMENT）
     (0, 7): 10,   # ; -> 状态10（SEMICO）
     (0, 8): 11,   # ( -> 状态11（L_BRACKET）
     (0, 9): 12,   # ) -> 状态12（R_BRACKET）
@@ -35,8 +36,10 @@ TRANSITION_TABLE = {
     (3, 1): 3,    # 小数点后接数字 -> 保持状态3
     # 状态4（*）的转移：再遇* -> POWER，其他终止
     (4, 3): 5,    # * -> 状态5（POWER）
-    # 状态6（/）的转移：再遇/ -> COMMENT
+    # 状态6（/）的转移：再遇/ -> COMMENT,
     (6, 4): 9,    # / -> 状态9（COMMENT）
+    # 状态6（/）的转移：再遇* -> COMMENT_START,
+    (6, 3): 14,   # * -> 状态14（COMMENT_START）
     # 状态7（-）的转移：再遇- -> COMMENT
     (7, 5): 9,    # - -> 状态9（COMMENT）
 }
@@ -53,11 +56,12 @@ FINAL_STATE_TABLE = {
     6: TokenType.DIV,      # DIV（/）
     7: TokenType.MINUS,    # MINUS（-）
     8: TokenType.PLUS,     # PLUS（+）
-    9: TokenType.COMMENT,  # COMMENT（//或--）
+    9: TokenType.COMMENT,  # COMMENT（//或--或#）
     10: TokenType.SEMICO,  # SEMICO（;）
     11: TokenType.L_BRACKET,# L_BRACKET（(）
     12: TokenType.R_BRACKET,# R_BRACKET（)）
     13: TokenType.COMMA,   # COMMA（,）
+    14: TokenType.COMMENT_START, # COMMENT_START（/*）
 }
 
 def get_char_type(ch: str) -> int:
@@ -84,5 +88,7 @@ def get_char_type(ch: str) -> int:
         return 9
     elif ch == ",":
         return 10
+    elif ch == "#":
+        return 12
     else:
         return 11  # 其他字符(空格也会到这里)

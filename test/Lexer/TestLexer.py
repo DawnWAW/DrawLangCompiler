@@ -40,7 +40,7 @@ def test_lexer(file_path: str):
 
 # 运行测试（需提前创建测试文件）
 if __name__ == "__main__":
-    test_lexer("correct_test.txt")
-    test_lexer("error_test.txt")
-    test_lexer("mixed_test.txt")
-    test_lexer("comment_test.txt")
+    test_lexer("../correct_test.txt")
+    test_lexer("../error_test.txt")
+    test_lexer("../mixed_test.txt")
+    test_lexer("../comment_test.txt")

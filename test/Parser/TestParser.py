@@ -24,3 +24,4 @@ if __name__ == "__main__":
     test_parser("../mixed_test.txt")
     test_parser("../comment_test.txt")
     test_parser("../expression_test.txt")
+    test_parser("../style_test.txt")

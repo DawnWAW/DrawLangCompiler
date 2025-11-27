@@ -1,0 +1,40 @@
+# 测试单独的颜色设置
+STYLE IS RED;
+STYLE IS BLUE;
+STYLE IS GREEN;
+STYLE IS YELLOW;
+STYLE IS BLACK;
+STYLE IS WHITE;
+
+# 测试单独的粗细度设置
+STYLE IS 1;
+STYLE IS 100;
+STYLE IS 1.1231;
+STYLE IS 0.1234;
+STYLE IS 1.2;
+STYLE IS 0;
+
+# 测试带透明度和线条粗细的复合样式
+STYLE IS (RED, 0.5);
+STYLE IS (BLUE, 0.8, 2.0);
+STYLE IS (GREEN, 1.0, 0.5);
+
+# 测试边界值
+STYLE IS (RED, 0.0);           # 最小透明度
+STYLE IS (BLUE, 1.0);          # 最大透明度
+STYLE IS (GREEN, 0);           # 整数形式的线条粗细
+STYLE IS (YELLOW, 0.5, 10.0);  # 较大的线条粗细
+
+# 以下应触发语法错误
+STYLE IS ();                   # 空括号
+STYLE IS (0.5);               # 缺少颜色
+STYLE IS (RED, -0.1);         # 负透明度
+STYLE IS (BLUE, 1.5);         # 透明度超出范围
+STYLE IS (GREEN, 0.5, -1.0);  # 负线条粗细
+STYLE IS RED, BLUE;           # 缺少括号和正确分隔
+
+
+# 测试大小写不敏感
+Style Is Red;
+style is (Blue, 0.5);
+StYlE iS (green, 0.8, 1.0);

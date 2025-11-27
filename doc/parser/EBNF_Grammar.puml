@@ -7,12 +7,19 @@
 *** ScaleStatement
 *** RotStatement
 *** ForStatement
+*** StyleStatement
 ** OriginStatement
 *** ORIGIN IS L_BRACKET Expression COMMA Expression R_BRACKET
 ** ScaleStatement
 *** SCALE IS L_BRACKET Expression COMMA Expression R_BRACKET
 ** RotStatement
 *** ROT IS Expression
+** StyleStatement
+*** STYLE IS STYLEVALUE
+** STYLEVALUE
+*** COLOR
+*** CONST_ID
+*** ( COLOR [, CONST_ID [, CONST_ID] ] )
 ** Expression
 *** Term { (PLUS | MINUS) Term }
 ** Term

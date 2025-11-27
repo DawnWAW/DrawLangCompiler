@@ -1,0 +1,30 @@
+@startmindmap
+* 最终的完整 EBNF 文法
+** Program
+*** { Statement SEMICO }
+** Statement
+*** OriginStatement
+*** ScaleStatement
+*** RotStatement
+*** ForStatement
+** OriginStatement
+*** ORIGIN IS L_BRACKET Expression COMMA Expression R_BRACKET
+** ScaleStatement
+*** SCALE IS L_BRACKET Expression COMMA Expression R_BRACKET
+** RotStatement
+*** ROT IS Expression
+** Expression
+*** Term { (PLUS | MINUS) Term }
+** Term
+*** Factor { (MUL | DIV) Factor }
+** Factor
+*** (PLUS | MINUS) Factor
+*** Component
+** Component
+*** Atom [ POWER Component ]
+** Atom
+*** CONST_ID
+*** T
+*** FUNC L_BRACKET Expression R_BRACKET
+*** L_BRACKET Expression R_BRACKET
+@endmindmap

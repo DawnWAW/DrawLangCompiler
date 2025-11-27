@@ -43,5 +43,17 @@
    直接用代码识别多行注释结尾, 而不是继续通过状态转移直到多行注释结束, 避免了过多无用的状态转移
 
 ### 修改中遇到的问题及解决方案：
-- 问题：多行注释的结束符[*/](../Compiler_c/README.TXT)是两个字符组成的序列，不能简单地当作单个字符处理
+#### 问题1：多行注释的结束符[*/](../Compiler_c/README.TXT)是两个字符组成的序列，不能简单地当作单个字符处理
 - 解决方案：在检测到星号(*)字符后，立即读取下一个字符检查是否为斜杠(/)，如果不是则使用[back_char()](../src/scanner/Lexer.py)方法回退字符，确保不会遗漏注释内容中的星号字符
+#### 问题2: 多行注释如果没有匹配到`*/`，直到文末也没有报错
+- 解决方案: 在词法分析遇到多行注释符开始符号`/*`时，如果直到文末也没有匹配到, 则判定为ERRTOKEN
+  ```python
+   elif token.type == TokenType.COMMENT_START:
+   # 多行注释开始，跳过到结束符 */
+   while True:
+     comment_char = self.get_char()
+     if comment_char == "":  # 文件结束
+         token.type = TokenType.ERRTOKEN
+         token.lexeme = "Unterminated comment"
+         return token
+  ```

@@ -95,7 +95,9 @@ class Lexer:
                 while True:
                     comment_char = self.get_char()
                     if comment_char == "":  # 文件结束
-                        break
+                        token.type = TokenType.ERRTOKEN
+                        token.lexeme = "Unterminated comment"
+                        return token
                     if comment_char == "*":
                         # 检查下一个字符是否为 /
                         next_char = self.get_char()

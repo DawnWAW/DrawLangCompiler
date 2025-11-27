@@ -13,7 +13,7 @@ def fetch_token(lexer: Lexer) -> None:
     global current_token
     current_token = lexer.get_token()
     if current_token.type == TokenType.ERRTOKEN:
-        raise SyntaxError(f"Invalid character encountered: '{current_token.lexeme}'")
+        raise SyntaxError(f"Syntax Error: '{current_token.lexeme}'")
 
 
 def match_token(expected_type: TokenType, lexer: Lexer) -> None:

@@ -7,6 +7,12 @@ from src.parser.ExprNode import ExprNode
 current_token: Token = None
 # 全局参数 T：所有 T 节点绑定此变量
 global_T = 0.0
+# 全局样式参数 style
+style_config = {
+    "color": "#000000",    # 默认颜色：黑色
+    "opacity": 1.0,        # 默认透明度：不透明
+    "line_width": 1.0      # 默认线条粗细：1.0
+}
 
 def fetch_token(lexer: Lexer) -> None:
     """获取下一个记号，更新 current_token"""
@@ -44,6 +50,20 @@ def make_expr_node(op_code: TokenType, *args) -> ExprNode:
         node.left = args[0]
         node.right = args[1]
     return node
+
+def check_non_negative(value: float, desc: str) -> None:
+    """校验数值非负（透明度、粗细不能为负）"""
+    if value < 0:
+        raise SyntaxError(
+            f"Semantic Error: {desc} cannot be negative (current value: {value})"
+        )
+
+def check_opacity(value: float) -> None:
+    """校验透明度在 0~1 之间"""
+    if not (0 <= value <= 1):
+        raise SyntaxError(
+            f"Semantic Error: opacity must be between 0 and 1 (current value: {value})"
+        )
 
 # --- 递归下降子程序 ---
 
@@ -129,6 +149,65 @@ def expression(lexer: Lexer) -> ExprNode:
         left_node = make_expr_node(op_token.type, left_node, right_node)
     return left_node
 
+
+def style_value(lexer: Lexer) -> tuple:
+    """STYLEVALUE → COLOR | CONST_ID | ( COLOR [, CONST_ID [, CONST_ID] ] )"""
+    global current_token
+    color = None
+    opacity = None
+    line_width = None
+
+    # 分支 1：STYLEVALUE = COLOR（仅颜色）
+    if current_token.type == TokenType.COLOR:
+        color = current_token.value  # 取预定义色值（如 #FF0000）
+        match_token(TokenType.COLOR, lexer)
+
+    # 分支 2：STYLEVALUE = CONST_ID（仅线条粗细）
+    elif current_token.type == TokenType.CONST_ID:
+        line_width = current_token.value
+        check_non_negative(line_width, "line_width")
+        match_token(TokenType.CONST_ID, lexer)
+
+    # 分支 3：STYLEVALUE = ( COLOR [, CONST_ID [, CONST_ID] ] )（括号包裹）
+    elif current_token.type == TokenType.L_BRACKET:
+        match_token(TokenType.L_BRACKET, lexer)  # 匹配左括号
+
+        # 括号内必须以颜色开头
+        if current_token.type != TokenType.COLOR:
+            raise SyntaxError("Syntax error: Parenthesized style value must start with a color keyword (e.g., red, blue)")
+        color = current_token.value
+        match_token(TokenType.COLOR, lexer)
+
+        # 可选第一个参数：透明度（CONST_ID）
+        if current_token.type == TokenType.COMMA:
+            match_token(TokenType.COMMA, lexer)  # 匹配逗号
+            if current_token.type != TokenType.CONST_ID:
+
+                raise SyntaxError("Syntax error: Opacity must be a numeric value")
+            opacity = current_token.value
+            check_non_negative(opacity, "Opacity")
+            check_opacity(opacity)
+            match_token(TokenType.CONST_ID, lexer)
+
+            # 可选第二个参数：线条粗细（CONST_ID）
+            if current_token.type == TokenType.COMMA:
+                match_token(TokenType.COMMA, lexer)  # 匹配逗号
+                if current_token.type != TokenType.CONST_ID:
+
+                    raise SyntaxError("Syntax error: Line width must be a numeric value")
+                line_width = current_token.value
+                check_non_negative(line_width, "line_width")
+                match_token(TokenType.CONST_ID, lexer)
+
+        # 匹配右括号
+        match_token(TokenType.R_BRACKET, lexer)
+
+    # 非法 STYLEVALUE
+    else:
+        raise SyntaxError("Syntax error: Invalid style value format (supported: color, numeric value, or (color[, opacity [, line_width]]))")
+
+    return color, opacity, line_width
+
 def origin_statement(lexer: Lexer) -> None:
     """OriginStatment → ORIGIN IS ( Expression , Expression )"""
     match_token(TokenType.ORIGIN, lexer)
@@ -160,6 +239,28 @@ def rot_statement(lexer: Lexer) -> None:
     rot_expr = expression(lexer)
     # (测试用)打印树
     print(f"parsed: ROT IS {rot_expr}")
+
+
+def style_statement(lexer: Lexer) -> None:
+    """StyleStatement → STYLE IS STYLEVALUE ;"""
+    global style_config
+    match_token(TokenType.STYLE, lexer)  # 匹配 STYLE 关键字
+    match_token(TokenType.IS, lexer)  # 匹配 IS 关键字
+
+    # 解析 STYLEVALUE，获取配置项（未指定则为 None）
+    color, opacity, line_width = style_value(lexer)
+
+    # 更新全局配置（仅覆盖指定的项，未指定项保留默认值）
+    if color is not None:
+        style_config["color"] = color
+    if opacity is not None:
+        style_config["opacity"] = opacity
+    if line_width is not None:
+        style_config["line_width"] = line_width
+
+    # 打印解析结果（便于调试和验证）
+    print(
+        f"parsed: Style is Color={style_config['color']}, Opacity={style_config['opacity']:.2f}, Line Width={style_config['line_width']:.2f}")
 
 def for_statement(lexer: Lexer) -> None:
     """ForStatment → FOR T FROM Expression TO Expression STEP Expression DRAW ( Expression , Expression )"""
@@ -193,9 +294,8 @@ def statement(lexer: Lexer) -> None:
         rot_statement(lexer)
     elif token_type == TokenType.FOR:
         for_statement(lexer)
-    # TODO: StyleStatement 原创点
-    # elif token_type == TokenType.STYLE;
-    #     style_statement(lexer)
+    elif token_type == TokenType.STYLE:
+        style_statement(lexer)
     else:
         raise SyntaxError(f"Syntax Error: Invalid statement starting with '{current_token.lexeme}'")
 

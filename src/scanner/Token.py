@@ -11,9 +11,19 @@ class Token:
     def __str__(self):
         # 便于打印测试结果
         func_addr = hex(id(self.func_ptr)) if self.func_ptr else "None"
+        value_str = f"{self.value:10.6f}" if isinstance(self.value, (int, float)) else f"{self.value}"
         return (f"TOKEN_TYPE: {self.type.value:12} | TEXT: {self.lexeme:8} | "
-                f"VALUE: {self.value:10.6f} | FUNC_PTR: {func_addr}")
+                f"VALUE:  {value_str} | FUNC_PTR: {func_addr}")
 
+# STYLE颜色映射表
+COLOR_MAP = {
+    'RED': '#FF0000',
+    'BLUE': '#0000FF',
+    'GREEN': '#00FF00',
+    'YELLOW': '#FFFF00',
+    'BLACK': '#000000',
+    'WHITE': '#FFFFFF'
+}
 
 # 符号表：(lexeme, token_type, value, func_ptr)
 SYMBOL_TABLE = [
@@ -33,12 +43,20 @@ SYMBOL_TABLE = [
     ("ORIGIN", TokenType.ORIGIN, 0.0, None),
     ("SCALE", TokenType.SCALE, 0.0, None),
     ("ROT", TokenType.ROT, 0.0, None),
+    ("STYLE", TokenType.STYLE, 0.0, None),
     ("IS", TokenType.IS, 0.0, None),
     ("FOR", TokenType.FOR, 0.0, None),
     ("FROM", TokenType.FROM, 0.0, None),
     ("TO", TokenType.TO, 0.0, None),
     ("STEP", TokenType.STEP, 0.0, None),
     ("DRAW", TokenType.DRAW, 0.0, None),
+    # 颜色
+    ("RED", TokenType.COLOR, COLOR_MAP['RED'], None),
+    ("BLUE", TokenType.COLOR, COLOR_MAP['BLUE'], None),
+    ("GREEN", TokenType.COLOR, COLOR_MAP['GREEN'], None),
+    ("YELLOW", TokenType.COLOR, COLOR_MAP['YELLOW'], None),
+    ("BLACK", TokenType.COLOR, COLOR_MAP['BLACK'], None),
+    ("WHITE", TokenType.COLOR, COLOR_MAP['WHITE'], None),
 ]
 
 def lookup_symbol(lexeme: str) -> Token:

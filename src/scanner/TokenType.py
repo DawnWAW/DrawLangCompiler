@@ -5,6 +5,7 @@ class TokenType(Enum):
     ORIGIN = "ORIGIN"    # 坐标平移语句标识
     SCALE = "SCALE"      # 比例设置语句标识
     ROT = "ROT"          # 角度旋转语句标识
+    STYLE = "STYLE"      # STYLE 关键字
     IS = "IS"            # 赋值关键字
     FOR = "FOR"          # 循环绘图语句标识
     FROM = "FROM"        # 循环起始关键字
@@ -14,6 +15,7 @@ class TokenType(Enum):
     # 其他记号类别
     T = "T"              # 唯一参数
     ID = "ID"            # 未匹配的标识符（后续查符号表）
+    COLOR = "COLOR"      # 颜色关键词（red/blue 等）
     COMMENT = "COMMENT"  # 注释
     COMMENT_START = "COMMENT_START"  # 多行注释开始
     CONST_ID = "CONST_ID"# 常数（字面量或PI/E）

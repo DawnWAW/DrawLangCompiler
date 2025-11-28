@@ -125,7 +125,6 @@ Syntax parsing failed: Syntax Error：Not a valid atom: '-'
 在Python自己的编译器中, `2**-2`的结果是0.25, 因此我们的编译器也应该先允许`-2`进行完一个`0-2`的factor一元减运算, 再作为指数参与`2**(-2)`幂运算。
 
 #### 原因分析
-![EBNF Grammar in PPT](./parser/PPT_EBNF_Grammar.png)
 问题出在 [component](../src/parser/Parser.py) 的推导文法中。在PPT给出的EBNF文法中，当处理幂运算时，会形成以下的推导:
 
 `Component -> Atom POWER Component -> Atom POWER Component -> Atom POWER Atom [POWER Component]`
@@ -153,7 +152,61 @@ def component(lexer: Lexer) -> ExprNode:
 这样修改后，表达式 `2**-2` 能够被正确解析为 `2**(-2)`，从而解决了该语法错误问题。
 
 
-## TODO: 修改点5：错误行号定位
+## 修改点5：自动坐标轴范围设置
+
+### 修改点说明：
+实现了根据绘图内容自动调整坐标轴范围的功能，确保绘制的图形能够完整显示在画布上，无需手动调整视图。
+
+### 修改的方式：
+
+#### 1. 坐标范围记录机制
+在 [SemanticContext.py](../src/semantics/SemanticContext.py) 中添加了 [AxisRange](file:///home/dawn/Program/CompilerExperiment/src/semantics/SemanticContext.py#L26-L31) 字典用于记录所有绘制点的坐标范围：
+```python
+AxisRange = {
+    "x_min": float('inf'),
+    "x_max": float('-inf'),
+    "y_min": float('inf'),
+    "y_max": float('-inf')
+}
+```
 
 
-## TODO: 修改点6: 词法分析时遇到错误不直接中断
+#### 2. 坐标范围更新逻辑
+在 [SemanticUtils.py](../src/semantics/SemanticUtils.py) 的 [batch_draw](../src/semantics/SemanticUtils.py) 函数中，每次绘制点时更新坐标范围：
+```python
+def batch_draw(ax: plt.Axes) -> None:
+    # ... 绘制逻辑 ...
+    
+    # 更新坐标范围
+    if CachedPoints["x"]:
+        AxisRange["x_min"] = min(AxisRange["x_min"], min(CachedPoints["x"]))
+        AxisRange["x_max"] = max(AxisRange["x_max"], max(CachedPoints["x"]))
+        AxisRange["y_min"] = min(AxisRange["y_min"], min(CachedPoints["y"]))
+        AxisRange["y_max"] = max(AxisRange["y_max"], max(CachedPoints["y"]))
+```
+
+
+#### 3. 自动设置坐标轴函数
+在 [main.py](../src/main.py) 中实现了 [set_axes_range](../src/main.py) 函数，用于根据记录的坐标范围自动调整视图：
+```python
+def set_axes_range(self, x_min: float, x_max: float, y_min: float, y_max: float) -> None:
+    """
+    根据给定的坐标范围设置坐标轴，并添加边距
+    """
+    self.ax.set_xlim(x_min - 50, x_max + 50)
+    self.ax.set_ylim(y_min - 50, y_max + 50)
+    self.canvas.draw()
+```
+
+
+#### 4. 集成到主流程
+在 [main.py](../src/main.py) 的 [load_script](../src/main.py) 方法中，在解析完脚本后调用坐标轴自动设置：
+```python
+def load_script(self) -> None:
+    # ... 解析脚本 ...
+    parse(file_path, self.ax)
+    
+    # 更新坐标轴范围
+    self.set_axes_range(sc.AxisRange["x_min"], sc.AxisRange["x_max"], 
+                       sc.AxisRange["y_min"], sc.AxisRange["y_max"])
+```

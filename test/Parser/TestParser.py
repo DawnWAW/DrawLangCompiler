@@ -8,7 +8,7 @@ def test_parser(file_path: str):
         print("="*80)
         
         # 调用语法分析器
-        parse(file_path)
+        parse(file_path, None)
         
         print("="*80)
         print("测试完成！\n")

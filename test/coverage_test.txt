@@ -1,0 +1,28 @@
+
+-- Arrow
+scale is (1, 1);
+style is (yellow, 0.5, 2);
+origin is (450, 450);
+rot is pi;
+for t from 0 to 400 step 1 draw( t, t );
+
+
+-- 心形曲线
+
+origin is (200, 200);
+rot is 3*pi/2;
+style is (red, 0.7, 1);
+
+-- 圆润型
+scale is (50, 50);
+for t from -pi to pi step pi/200 draw((2*cos(t) - cos(2*t)),  (2*sin(t)-sin(2*t))  );
+
+-- 尖锐型
+origin is (200+80, 200+80);
+style is (blue, 0.9, 2);
+scale is (8, 8);
+rot is 0;
+for t from 0 to 2*pi  step pi/200 draw(
+            16*(sin(t)**3),
+			13*cos(t) - 5*cos(2*t) - 2*cos(3*t)-cos(4*t)
+	  );

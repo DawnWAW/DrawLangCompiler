@@ -1,18 +1,10 @@
 from src.scanner.Lexer import Lexer
-from src.scanner.TokenType import TokenType
 from src.scanner.Token import Token
-from src.parser.ExprNode import ExprNode
+from src.semantics.SemanticUtils import *
+from src.semantics import SemanticContext as sc
 
 # 全局变量：当前扫描到的记号
-current_token: Token = None
-# 全局参数 T：所有 T 节点绑定此变量
-global_T = 0.0
-# 全局样式参数 style
-style_config = {
-    "color": "#000000",    # 默认颜色：黑色
-    "opacity": 1.0,        # 默认透明度：不透明
-    "line_width": 1.0      # 默认线条粗细：1.0
-}
+current_token: Token | None = None
 
 def fetch_token(lexer: Lexer) -> None:
     """获取下一个记号，更新 current_token"""
@@ -40,7 +32,7 @@ def make_expr_node(op_code: TokenType, *args) -> ExprNode:
         node.const_val = args[0]
     elif op_code == TokenType.T:
         # 参数节点：绑定全局 T
-        node.param_ptr = lambda: global_T  # 使用 lambda 模拟指针
+        node.param_ptr = lambda: sc.Parameter_T  # 使用 lambda 模拟指针
     elif op_code == TokenType.FUNC:
         # 函数节点：args 为 (函数指针, 子节点)
         node.func_ptr = args[0]
@@ -220,6 +212,11 @@ def origin_statement(lexer: Lexer) -> None:
     # (测试用)打印树
     print(f"parsed: ORIGIN IS ({x_expr}, {y_expr})")
 
+    # 语义动作: 计算并设置平移原点
+    sc.Origin_x = get_expr_value(x_expr)
+    sc.Origin_y = get_expr_value(y_expr)
+    print(f"Origin set to ({sc.Origin_x}, {sc.Origin_y})")
+
 def scale_statement(lexer: Lexer) -> None:
     """ScaleStatment → SCALE IS ( Expression , Expression )"""
     match_token(TokenType.SCALE, lexer)
@@ -232,6 +229,11 @@ def scale_statement(lexer: Lexer) -> None:
     # (测试用)打印树
     print(f"parsed: SCALE IS ({x_scale}, {y_scale})")
 
+    # 语义动作: 计算缩放因子并设置
+    sc.Scale_x = get_expr_value(x_scale)
+    sc.Scale_y = get_expr_value(y_scale)
+    print(f"Scale set to ({sc.Scale_x}, {sc.Scale_y})")
+
 def rot_statement(lexer: Lexer) -> None:
     """RotStatment → ROT IS Expression"""
     match_token(TokenType.ROT, lexer)
@@ -240,10 +242,13 @@ def rot_statement(lexer: Lexer) -> None:
     # (测试用)打印树
     print(f"parsed: ROT IS {rot_expr}")
 
+    # 语义动作: 计算旋转角度并设置
+    sc.Rot_ang = get_expr_value(rot_expr)
+    print(f"Rot set to {sc.Rot_ang}")
+
 
 def style_statement(lexer: Lexer) -> None:
     """StyleStatement → STYLE IS STYLEVALUE ;"""
-    global style_config
     match_token(TokenType.STYLE, lexer)  # 匹配 STYLE 关键字
     match_token(TokenType.IS, lexer)  # 匹配 IS 关键字
 
@@ -252,19 +257,17 @@ def style_statement(lexer: Lexer) -> None:
 
     # 更新全局配置（仅覆盖指定的项，未指定项保留默认值）
     if color is not None:
-        style_config["color"] = color
+        sc.StyleConfig["color"] = color
     if opacity is not None:
-        style_config["opacity"] = opacity
+        sc.StyleConfig["opacity"] = opacity
     if line_width is not None:
-        style_config["line_width"] = line_width
+        sc.StyleConfig["line_width"] = line_width
 
     # 打印解析结果（便于调试和验证）
     print(
-        f"parsed: Style is Color={style_config['color']}, Opacity={style_config['opacity']:.2f}, Line Width={style_config['line_width']:.2f}")
-
-def for_statement(lexer: Lexer) -> None:
+        f"parsed: Style is Color={sc.StyleConfig['color']}, Opacity={sc.StyleConfig['opacity']:.2f}, Line Width={sc.StyleConfig['line_width']:.2f}")
+def for_statement(lexer: Lexer, ax: plt.Axes) -> None:
     """ForStatment → FOR T FROM Expression TO Expression STEP Expression DRAW ( Expression , Expression )"""
-    global global_T
     match_token(TokenType.FOR, lexer)
     match_token(TokenType.T, lexer)
     match_token(TokenType.FROM, lexer)
@@ -282,7 +285,11 @@ def for_statement(lexer: Lexer) -> None:
     # (测试用)打印树
     print(f"parsed: FOR T FROM {start_expr} TO {end_expr} STEP {step_expr} DRAW ({x_expr}, {y_expr})")
 
-def statement(lexer: Lexer) -> None:
+    # 语义动作: 绘制所有点
+    cache_points(start_expr, end_expr, step_expr, x_expr, y_expr)  # 缓存点
+    batch_draw(ax)  # 批量绘制
+
+def statement(lexer: Lexer, ax: plt.Axes) -> None:
     """Statement → OriginStatment | ScaleStatment | RotStatment | ForStatment"""
     global current_token
     token_type = current_token.type
@@ -293,32 +300,32 @@ def statement(lexer: Lexer) -> None:
     elif token_type == TokenType.ROT:
         rot_statement(lexer)
     elif token_type == TokenType.FOR:
-        for_statement(lexer)
+        for_statement(lexer, ax)
     elif token_type == TokenType.STYLE:
         style_statement(lexer)
     else:
         raise SyntaxError(f"Syntax Error: Invalid statement starting with '{current_token.lexeme}'")
 
-def program(lexer: Lexer) -> None:
+def program(lexer: Lexer, ax: plt.Axes) -> None:
     """Program → { Statement ; }（0 个或多个语句，以分号结束）"""
     global current_token
     # 初始化：获取第一个记号
     fetch_token(lexer)
     while current_token.type != TokenType.NONTOKEN:
         # 解析一个语句
-        statement(lexer)
+        statement(lexer, ax)
         # 匹配语句结束符分号
         match_token(TokenType.SEMICO, lexer)
 
     print("\nParsing completed: No syntax errors found")
 
-def parse(file_path: str) -> None:
+def parse(file_path: str, ax: plt.Axes = None) -> None:
     """Parser 入口：初始化 Lexer，启动语法分析"""
     # 初始化词法分析器
     lexer = Lexer(file_path)
     try:
         # 启动语法分析
-        program(lexer)
+        program(lexer, ax)
     except SyntaxError as e:
         print(f"\nSyntax parsing failed: {e}")
     finally:

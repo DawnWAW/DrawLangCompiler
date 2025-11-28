@@ -3,5 +3,12 @@
 
 # doc文档中非自创文件
 /doc/resource
+# doc文档中生成文件
+/doc/*.assets
+/doc/*.docx
+/doc/*.pdf
+/doc/*.zip
+/doc/原创性工作说明.md
+/doc/编译原理课程实验报告-1CS26500202-2300920005-李嘉昊-23009201444-李明炜.docx.docx
 
 /.idea/
